@@ -43,6 +43,7 @@
               />
             </div>
             <div
+              v-if="tags.length"
               class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap"
             >
               <span
@@ -54,13 +55,15 @@
                 {{ item }}
               </span>
             </div>
-            <!-- <div class="text-sm text-red-600">Такой тикер уже добавлен</div> -->
+            <div v-if="hasTicker" class="text-sm text-red-600">
+              Такой тикер уже добавлен
+            </div>
           </div>
         </div>
         <button
           type="button"
           @click="add"
-          :disabled="!ticker"
+          :disabled="!ticker || hasTicker"
           class="my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
         >
           <!-- Heroicon name: solid/mail -->
@@ -177,14 +180,23 @@ export default {
       ticker: "",
       tickers: [],
       sel: null,
-      tags: ["BTC", "DOGE", "BCH", "ETH"],
       graph: [],
+      coins: [],
     };
   },
+
+  async mounted() {
+    const res = await fetch(
+      "https://min-api.cryptocompare.com/data/all/coinlist?summary=true"
+    );
+    const { Data } = await res.json();
+    this.coins = Object.keys(Data);
+  },
+
   methods: {
     add() {
       const newTicker = {
-        name: this.ticker,
+        name: this.ticker.toUpperCase(),
         price: "-",
         intervalId: null,
       };
@@ -219,6 +231,25 @@ export default {
       const minValue = Math.min(...this.graph);
       const base = maxValue === minValue ? 1 : maxValue - minValue;
       return this.graph.map((price) => ((price - minValue) * 97) / base + 3);
+    },
+  },
+
+  computed: {
+    hasTicker() {
+      return this.tickers.some((el) => el.name === this.ticker.toUpperCase());
+    },
+
+    tags() {
+      if (this.ticker === "") return [];
+      const res = this.coins.filter((el) =>
+        this.tickers.some((item) => item.name === el)
+          ? false
+          : el.includes(this.ticker.toUpperCase())
+      );
+      if (res.length > 4) {
+        res.length = 4;
+      }
+      return res;
     },
   },
 };
